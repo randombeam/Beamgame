@@ -14,6 +14,28 @@ canvas {
 display: block;
 border: 2px solid black;
 }
+
+.menu-container {
+display: flex;
+justify-content: space-around;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+}
+
+.menu-button {
+background-color: blue;
+color: white;
+border: none;
+padding: 10px 20px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 16px;
+cursor: pointer;
+border-radius: 12px;
+}
 </style>
 </head>
 <body>
@@ -32,12 +54,12 @@ const boxWidth = canvas.width - 20;
 const boxHeight = canvas.height - 20;
 const beamWidth = 10;
 const beamHeight = boxHeight;
-let beamSpeed = 17; 
-const minBeamGap = Math.floor(canvas.width / 4);  
-const maxBeamsOnScreen = 4; 
+let beamSpeed = 19;
+const minBeamGap = Math.floor(canvas.width / 4);
+const maxBeamsOnScreen = 4;
 const minBeamsOnScreen = 5;
-const speedIncreaseInterval = 30 * 60;  
-const fpsUpdateInterval = 3 * 60; 
+const speedIncreaseInterval = 30 * 60;
+const fpsUpdateInterval = 3 * 60;
 let playerX = boxWidth / 2 - playerSize / 2;
 let playerY = boxHeight - playerSize - 10;
 let isMovingLeft = false;
@@ -50,13 +72,19 @@ let lastFPSUpdateTime = 0;
 let lastFrameTime = Date.now();
 let fps = 0;
 
+// Check if there's a saved high score
+const savedHighScore = localStorage.getItem("highScore");
+if (savedHighScore) {
+highScore = parseInt(savedHighScore, 10);
+}
+
 function gameLoop() {
 if (isSurviving) {
 update();
 draw();
 requestAnimationFrame(gameLoop);
 } else {
-gameOver();
+showGameOverMenu();
 }
 }
 
@@ -159,6 +187,7 @@ lastSpeedIncreaseTime = currentTime;
 function updateHighScore() {
 if (score > highScore) {
 highScore = score;
+localStorage.setItem("highScore", highScore);
 }
 }
 
@@ -195,7 +224,73 @@ ctx.fillText("High Score: " + Math.floor(highScore / 6), 20, 60);
 function drawFPS() {
 ctx.fillStyle = "black";
 ctx.font = "20px Pixel";
-ctx.fillText("FPS: " + fps, 20, 90);
+ctx.fillText("FPS: " + fps + " | Beam Speed: " + beamSpeed, 20, 90);
+}
+
+function showMenu() {
+const menuContainer = document.createElement("div");
+menuContainer.classList.add("menu-container");
+
+const easyButton = createMenuButton("Easy", 17);
+const mediumButton = createMenuButton("Medium", 19);
+const hardButton = createMenuButton("Hard", 21);
+
+menuContainer.appendChild(easyButton);
+menuContainer.appendChild(mediumButton);
+menuContainer.appendChild(hardButton);
+
+document.body.appendChild(menuContainer);
+}
+
+function createMenuButton(text, speed) {
+const button = document.createElement("button");
+button.classList.add("menu-button");
+button.textContent = text;
+
+button.addEventListener("click", function () {
+startGame(speed);
+});
+
+return button;
+}
+
+function startGame(speed) {
+beamSpeed = speed;
+document.body.removeChild(document.querySelector(".menu-container"));
+requestAnimationFrame(gameLoop);
+}
+
+function showGameOverMenu() {
+const menuContainer = document.createElement("div");
+menuContainer.classList.add("menu-container");
+
+const restartButton = createMenuButton("Restart", beamSpeed);
+const changeDifficultyButton = createMenuButton("Change Difficulty", 19);
+
+restartButton.addEventListener("click", function () {
+resetGame();
+document.body.removeChild(menuContainer);
+requestAnimationFrame(gameLoop);
+});
+var nzxt;
+changeDifficultyButton.addEventListener("click", function () {
+location.reload()
+});
+
+menuContainer.appendChild(restartButton);
+menuContainer.appendChild(changeDifficultyButton);
+
+document.body.appendChild(menuContainer);
+}
+
+function resetGame() {
+beams.length = 0;
+playerX = boxWidth / 2 - playerSize / 2;
+playerY = boxHeight - playerSize - 10;
+isSurviving = true;
+score = 0;
+lastSpeedIncreaseTime = 0;
+lastFPSUpdateTime = 0;
 }
 
 window.addEventListener("keydown", function (event) {
@@ -216,31 +311,8 @@ isMovingRight = false;
 }
 });
 
-function gameOver() {
-ctx.fillStyle = "red";
-ctx.font = "30px Comic Sans";
-ctx.fillText("You died", canvas.width / 2 - 100, canvas.height / 2 - 30);
-ctx.font = "20px Arial";
-ctx.fillText("Survival Time: " + Math.floor(score / 60) + "s", canvas.width / 2 - 100, canvas.height / 2);
-setTimeout(() => {
-resetGame();
-requestAnimationFrame(gameLoop);
-}, 2000);
-}
-
-function resetGame() {
-beams.length = 0;
-playerX = boxWidth / 2 - playerSize / 2;
-playerY = boxHeight - playerSize - 10;
-isSurviving = true;
-score = 0;
-beamSpeed = 17; // nerd gg checking the code
-lastSpeedIncreaseTime = 0;
-lastFPSUpdateTime = 0;
-}
-
-requestAnimationFrame(gameLoop);
-});
+showMenu();
+}); 
 </script>
 </body>
 </html>
