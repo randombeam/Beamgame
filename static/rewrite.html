@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Beam Game</title>
+        <style>
+            body {
+            margin: 0;
+            overflow: hidden;
+            }
+
+            canvas {
+            display: block;
+            border: 2px solid black;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="gamecanvas"></canvas>
+        <script>
+            /**
+             * Wait for DOM to load
+             * @event
+             */
+            document.addEventListener("DOMContentLoaded", function () {
+                var canvas = document.getElementById("gamecanvas")
+                var ctx = canvas.getContext("2d")
+				var showingMenu = true
+                var keys = {
+                    ArrowLeft: false,
+                    ArrowRight: false,
+                    a: false,
+                    d: false
+                }
+                var lastFrameTime = Date.now()
+                var fps = 0
+                var skins = {"default": {"src": "assets/player.png", "width": 40, "height": 40, "speed": 10}, "best": {"src": "assets/bestskin.png", "width": 65, "height": 50, "speed": 6}}
+                var currSkin = "default"
+                
+                var playerSize = [skins[currSkin]["width"], skins[currSkin]["height"]]
+                canvas.width = window.innerWidth - 4
+                canvas.height = window.innerHeight - 4
+                var playerSprite = new Image()
+                playerSprite.src = skins[currSkin]["src"]
+                // Place player on canvas
+                var player = {
+                    x: canvas.width / 2 - playerSize[0] / 2,
+                    y: canvas.height - playerSize[1] - 10,
+                    width: playerSize[0],
+                    height: playerSize[1],
+                    speed: skins[currSkin]["speed"],
+                    dx: 0,
+                    dy: 0
+                }
+                /**
+                 * Draw the player on the canvas
+                 */
+                function drawPlayer() {
+                    ctx.drawImage(playerSprite, player.x, player.y, player.width, player.height)
+                }
+                function fpsRender() {
+                    ctx.fillStyle = "black"
+                    ctx.font = "20px Arial"
+                    ctx.fillText("FPS: " + fps, 10, 30)
+                }
+                function skinChange(newSkin) {
+                    currSkin = newSkin
+                    playerSprite.src = skins[currSkin]["src"]
+                    player.width = skins[currSkin]["width"]
+                    player.height = skins[currSkin]["height"]
+                    player.speed = skins[currSkin]["speed"]
+                }
+
+                function inputHandler() {
+                    document.addEventListener("keydown", function (event) {
+                        // Step 2: In the keydown event listener, set the state of the pressed key to true
+                        if (keys.hasOwnProperty(event.key)) {
+                            keys[event.key] = true;
+                        }
+                    })
+
+                    document.addEventListener("keyup", function (event) {
+                        // Step 3: In the keyup event listener, set the state of the released key to false
+                        if (keys.hasOwnProperty(event.key)) {
+                            keys[event.key] = false;
+                        }
+                    })
+                }
+				function menuHandler() {
+					document.addEventListener("keydown", function (event) {
+						if (showingMenu) {
+						if (event.key === "s") {
+							showingMenu = false
+						}
+						if (event.key === "c") {
+							if (currSkin === "default") {
+								skinChange("best")
+							} else {
+								skinChange("default")
+							}
+						}
+						if (event.key == "d"){
+							// Render difficulty <menu></menu>
+							// TODO
+						}
+						}
+					})
+				}
+				function renderMenu(){
+					ctx.fillStyle = "black"
+					ctx.font = "60px Arial"
+					ctx.fillText("Beam Game", canvas.width / 2 - 150, 100)
+					ctx.font = "20px Arial"
+					ctx.fillText("Press 's' to start", canvas.width / 2 - 75, 150)
+					ctx.fillText("Press 'c' to change skin", canvas.width / 2 - 100, 200)
+					// Change difficulty message
+					ctx.fillText("Press 'd' to change difficulty", canvas.width / 2 - 115, 250)
+					menuHandler()
+				}
+                /**
+                 * Render a frame of the game
+                 */
+                function frameRender() {
+                    // FPS Calculator
+                    var now = Date.now()
+                    var delta = now - lastFrameTime
+                    lastFrameTime = now
+                    fps = Math.floor(1000 / delta)
+                    // Clear the canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    // Draw the player
+					if (showingMenu) {
+						renderMenu()
+					} else if (!showingMenu){
+						inputHandler()
+                    	drawPlayer()
+					}
+                    // Draw the FPS
+                    fpsRender()
+                    // Move the player
+                    if (keys.ArrowLeft || keys.a) {
+                        player.dx = -player.speed
+                    }
+                    if (keys.ArrowRight || keys.d) {
+                        player.dx = player.speed
+                    }
+                    if (!keys.ArrowLeft && !keys.a && !keys.ArrowRight && !keys.d) {
+                        player.dx = 0
+                    }
+                    // Move the player
+                    player.x += player.dx
+                }
+                /**
+                 * The main game loop
+                 */
+                function gameLoop() {
+                    frameRender()
+                    requestAnimationFrame(gameLoop)
+                }
+                gameLoop()
+            })
+        </script>
+    </body>
+</html>
