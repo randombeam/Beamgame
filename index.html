@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reaction Game</title>
+<style>
+body {
+margin: 0;
+overflow: hidden;
+}
+
+canvas {
+display: block;
+border: 2px solid black;
+}
+
+.menu-container {
+display: flex;
+justify-content: space-around;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+}
+
+.menu-button {
+background-color: blue;
+color: white;
+border: none;
+padding: 10px 20px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 16px;
+cursor: pointer;
+border-radius: 12px;
+}
+</style>
+</head>
+<body>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+const canvas = document.createElement("canvas");
+document.body.appendChild(canvas);
+const ctx = canvas.getContext("2d");
+
+// Set canvas size
+canvas.width = window.innerWidth - 4;
+canvas.height = window.innerHeight - 4;
+
+const playerSize = 20;
+const boxWidth = canvas.width - 20;
+const boxHeight = canvas.height - 20;
+const beamWidth = 10;
+const beamHeight = boxHeight;
+let beamSpeed = 19;
+const minBeamGap = Math.floor(canvas.width / 4);
+const maxBeamsOnScreen = 4;
+const minBeamsOnScreen = 5;
+const speedIncreaseInterval = 30 * 60;
+const fpsUpdateInterval = 3 * 60;
+let playerX = boxWidth / 2 - playerSize / 2;
+let playerY = boxHeight - playerSize - 10;
+let isMovingLeft = false;
+let isMovingRight = false;
+let isSurviving = true;
+let score = 0;
+let highScore = 0;
+let lastSpeedIncreaseTime = 0;
+let lastFPSUpdateTime = 0;
+let lastFrameTime = Date.now();
+let fps = 0;
+
+// Check if there's a saved high score
+const savedHighScore = localStorage.getItem("highScore");
+if (savedHighScore) {
+highScore = parseInt(savedHighScore, 10);
+}
+
+function gameLoop() {
+if (isSurviving) {
+update();
+draw();
+requestAnimationFrame(gameLoop);
+} else {
+showGameOverMenu();
+}
+}
+
+function update() {
+movePlayer();
+spawnBeams();
+checkCollision();
+increaseSpeed();
+updateHighScore();
+calculateFPS();
+score++;
+}
+
+function draw() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+drawBox();
+drawPlayer();
+drawScore();
+drawHighScore();
+drawFPS();
+drawBeams();
+}
+
+function drawBox() {
+ctx.strokeStyle = "black";
+ctx.lineWidth = 2;
+ctx.strokeRect(10, 10, boxWidth, boxHeight);
+}
+
+function drawPlayer() {
+ctx.fillStyle = "blue";
+ctx.fillRect(playerX + 10, playerY + 10, playerSize, playerSize);
+ctx.fillStyle = "black";
+ctx.fillRect(playerX + 10 + playerSize / 3, playerY + 10 + playerSize / 3, 2, 2);
+ctx.fillRect(playerX + 10 + 2 * playerSize / 3, playerY + 10 + playerSize / 3, 2, 2);
+}
+
+function movePlayer() {
+if (isMovingLeft && playerX > 10) {
+playerX -= 5;
+}
+if (isMovingRight && playerX < boxWidth - playerSize + 10) {
+playerX += 5;
+}
+}
+
+const beams = [];
+
+function spawnBeams() {
+while (beams.length < maxBeamsOnScreen) {
+const lastBeam = beams[beams.length - 1];
+const minGapX = lastBeam ? lastBeam.x + minBeamGap : boxWidth + 10;
+
+const beamColor = Math.random() < 0.5 ? "red" : "green";
+beams.push({
+x: minGapX,
+y: 10,
+color: beamColor,
+});
+}
+
+for (let i = 0; i < beams.length; i++) {
+beams[i].x -= beamSpeed;
+}
+
+beams.forEach((beam, index) => {
+if (beam.x < 10 - beamWidth) {
+beams.splice(index, 1);
+}
+});
+}
+
+function checkCollision() {
+for (let i = 0; i < beams.length; i++) {
+const beam = beams[i];
+const isColliding = playerX + 10 < beam.x + beamWidth &&
+playerX + 10 + playerSize > beam.x &&
+playerY + 10 < beam.y + boxHeight &&
+playerY + 10 + playerSize > beam.y;
+
+if (isColliding) {
+if ((beam.color === "red" && (isMovingLeft || isMovingRight)) ||
+(beam.color === "green" && !(isMovingLeft || isMovingRight))) {
+isSurviving = false;
+}
+break;
+}
+}
+}
+
+function increaseSpeed() {
+const currentTime = Math.floor(score / 60);
+
+if (currentTime % speedIncreaseInterval === 0 && currentTime !== lastSpeedIncreaseTime) {
+beamSpeed *= 2;
+lastSpeedIncreaseTime = currentTime;
+}
+}
+
+function updateHighScore() {
+if (score > highScore) {
+highScore = score;
+localStorage.setItem("highScore", highScore);
+}
+}
+
+function calculateFPS() {
+const now = Date.now();
+const elapsed = now - lastFrameTime;
+fps = Math.round(1000 / elapsed);
+lastFrameTime = now;
+
+if (score % fpsUpdateInterval === 0 && score !== lastFPSUpdateTime) {
+lastFPSUpdateTime = score;
+}
+}
+
+function drawBeams() {
+beams.forEach(beam => {
+ctx.fillStyle = beam.color;
+ctx.fillRect(beam.x, beam.y, beamWidth, beamHeight);
+});
+}
+
+function drawScore() {
+ctx.fillStyle = "black";
+ctx.font = "20px Arial";
+ctx.fillText("Score: " + Math.floor(score / 6), 20, 30);
+}
+
+function drawHighScore() {
+ctx.fillStyle = "black";
+ctx.font = "20px Arial";
+ctx.fillText("High Score: " + Math.floor(highScore / 6), 20, 60);
+}
+
+function drawFPS() {
+ctx.fillStyle = "black";
+ctx.font = "20px Pixel";
+ctx.fillText("FPS: " + fps + " | Beam Speed: " + beamSpeed, 20, 90);
+}
+
+function showMenu() {
+const menuContainer = document.createElement("div");
+menuContainer.classList.add("menu-container");
+
+const easyButton = createMenuButton("Easy", 17);
+const mediumButton = createMenuButton("Medium", 19);
+const hardButton = createMenuButton("Hard", 21);
+
+menuContainer.appendChild(easyButton);
+menuContainer.appendChild(mediumButton);
+menuContainer.appendChild(hardButton);
+
+document.body.appendChild(menuContainer);
+}
+
+function createMenuButton(text, speed) {
+const button = document.createElement("button");
+button.classList.add("menu-button");
+button.textContent = text;
+
+button.addEventListener("click", function () {
+startGame(speed);
+});
+
+return button;
+}
+
+function startGame(speed) {
+beamSpeed = speed;
+document.body.removeChild(document.querySelector(".menu-container"));
+requestAnimationFrame(gameLoop);
+}
+
+function showGameOverMenu() {
+const menuContainer = document.createElement("div");
+menuContainer.classList.add("menu-container");
+
+const restartButton = createMenuButton("Restart", beamSpeed);
+const changeDifficultyButton = createMenuButton("Change Difficulty", 19);
+
+restartButton.addEventListener("click", function () {
+resetGame();
+document.body.removeChild(menuContainer);
+requestAnimationFrame(gameLoop);
+});
+var nzxt;
+changeDifficultyButton.addEventListener("click", function () {
+location.reload()
+});
+
+menuContainer.appendChild(restartButton);
+menuContainer.appendChild(changeDifficultyButton);
+
+document.body.appendChild(menuContainer);
+}
+
+function resetGame() {
+beams.length = 0;
+playerX = boxWidth / 2 - playerSize / 2;
+playerY = boxHeight - playerSize - 10;
+isSurviving = true;
+score = 0;
+lastSpeedIncreaseTime = 0;
+lastFPSUpdateTime = 0;
+}
+
+window.addEventListener("keydown", function (event) {
+if (event.key === "ArrowLeft") {
+isMovingLeft = true;
+}
+if (event.key === "ArrowRight") {
+isMovingRight = true;
+}
+});
+
+window.addEventListener("keyup", function (event) {
+if (event.key === "ArrowLeft") {
+isMovingLeft = false;
+}
+if (event.key === "ArrowRight") {
+isMovingRight = false;
+}
+});
+
+showMenu();
+}); 
+</script>
+</body>
+</html>
